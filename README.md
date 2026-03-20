@@ -3,6 +3,7 @@
 Stay informed when a new **GeekMagic SmallTV-Ultra** firmware release appears on GitHub.
 
 This project is a lightweight Windows-based update watcher built for users who want a simple, reliable way to monitor the `GeekMagicClock/smalltv-ultra` repository without manually checking it every day. The script looks for the newest `Ultra-V*` release folder, compares it with your last known version, and alerts you with a native Windows toast notification when something new shows up.
+
 ![Toast](docs/toast.jpg "Title")
 
 It can also install itself into **Windows Task Scheduler**, including a hidden launcher so scheduled runs happen quietly in the background without flashing a PowerShell window.
