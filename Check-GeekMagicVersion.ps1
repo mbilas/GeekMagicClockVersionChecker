@@ -46,23 +46,15 @@ function Get-HiddenLauncherPath {
 }
 
 function Ensure-HiddenLauncher {
-    $TaskCommand = (Get-Command powershell.exe -ErrorAction SilentlyContinue).Source
-    if (-not $TaskCommand) {
-        $TaskCommand = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
-    }
-
-    if (-not $TaskCommand) {
-        throw "Unable to find powershell.exe or pwsh.exe for the hidden launcher."
-    }
-
     $LauncherPath = Get-HiddenLauncherPath
-    $EscapedTaskCommand = $TaskCommand.Replace("""", """""")
-    $EscapedScriptPath = $PSCommandPath.Replace("""", """""")
-
     $LauncherContent = @"
 Set shell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
 quote = Chr(34)
-command = quote & "$EscapedTaskCommand" & quote & " -NoProfile -ExecutionPolicy Bypass -File " & quote & "$EscapedScriptPath" & quote
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+scriptPath = scriptDir & "\Check-GeekMagicVersion.ps1"
+powershell = shell.ExpandEnvironmentStrings("%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe")
+command = quote & powershell & quote & " -NoProfile -ExecutionPolicy Bypass -File " & quote & scriptPath & quote
 shell.Run command, 0, True
 "@
 
@@ -244,12 +236,18 @@ try {
     elseif ($LatestVersion -gt $KnownVersion) {
         Write-Log "NEW VERSION DETECTED: $LatestVersion (was $KnownVersion)"
 
+        # Update state file FIRST so a failed toast doesn't cause repeated re-notifications
+        $LatestVersion.ToString() | Set-Content -Path $StateFile -NoNewline
+
         $Title   = "GeekMagic SmallTV-Ultra Update Available!"
         $Msg     = "New version: $($Latest.name)  (you had $KnownVersionStr)"
-        Show-ToastNotification -Title $Title -Message $Msg -Url $RepoUrl
+        try {
+            Show-ToastNotification -Title $Title -Message $Msg -Url $RepoUrl
+        }
+        catch {
+            Write-Log "WARNING: Toast notification failed (no interactive session?): $_"
+        }
 
-        # Update state file to the new version
-        $LatestVersion.ToString() | Set-Content -Path $StateFile -NoNewline
         Write-Host "New version detected: $($Latest.name)"
     }
     else {
